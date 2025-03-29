@@ -1,33 +1,59 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { auth, onAuthStateChanged, getTenantNameFromClaims } from './firebase';
+import { auth } from './firebase';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
-// Create the authentication context
 const AuthContext = createContext();
 
-// Custom hook to use the auth context
-export const useAuth = () => {
+export function useAuth() {
   return useContext(AuthContext);
-};
+}
 
-// Auth provider component
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authToken, setAuthToken] = useState(null);
   const [tenantName, setTenantName] = useState(null);
+
+  function login(email, password) {
+    return signInWithEmailAndPassword(auth, email, password);
+  }
+
+  function logout() {
+    return signOut(auth);
+  }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       
       if (user) {
-        // Get the Firebase token
-        const token = await user.getIdToken();
-        setAuthToken(token);
-        
-        // Get tenant name from claims
-        const tenant = await getTenantNameFromClaims(user);
-        setTenantName(tenant);
+        try {
+          // Get the ID token with claims
+          const idTokenResult = await user.getIdTokenResult();
+          
+          // Set the auth token
+          const token = await user.getIdToken();
+          setAuthToken(token);
+          
+          // Extract tenant info from claims
+          const tenantClaim = idTokenResult.claims.tenant;
+          
+          if (tenantClaim && tenantClaim.name) {
+            setTenantName(tenantClaim.name);
+          } else {
+            // If tenant name is not available in claims, use a default value
+            setTenantName('default-tenant');
+          }
+          
+          console.log('Auth token and tenant info set:', { 
+            token: token.substring(0, 20) + '...', 
+            tenantName: tenantClaim?.name || 'default-tenant' 
+          });
+        } catch (error) {
+          console.error('Error getting auth token or tenant info:', error);
+          // Set default tenant name if there's an error
+          setTenantName('default-tenant');
+        }
       } else {
         setAuthToken(null);
         setTenantName(null);
@@ -39,11 +65,12 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  // Auth context value
   const value = {
     currentUser,
     authToken,
     tenantName,
+    login,
+    logout,
     loading
   };
 
@@ -52,4 +79,4 @@ export const AuthProvider = ({ children }) => {
       {!loading && children}
     </AuthContext.Provider>
   );
-};
+}

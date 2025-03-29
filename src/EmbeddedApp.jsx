@@ -1,65 +1,53 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import TemplateApp from './childApps/TemplateApp';
 
 const EmbeddedApp = () => {
   const { appName } = useParams();
   const { authToken, tenantName, currentUser } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [childAppComponent, setChildAppComponent] = useState(null);
-
-  useEffect(() => {
-    if (!currentUser) {
-      setError('You must be logged in to view embedded apps');
-      setLoading(false);
-      return;
-    }
-
-    if (!authToken || !tenantName) {
-      setError('Authentication token or tenant name is missing');
-      setLoading(false);
-      return;
-    }
-
-    // This is a placeholder for dynamically loading the child app
-    // In a real implementation, this would dynamically import the child app
-    // or render it from an npm package
-    setLoading(false);
-    setChildAppComponent(
-      <div className="child-app-placeholder">
-        <h3>Child App: {appName}</h3>
-        <p>This is where the {appName} app would be embedded.</p>
-        <p>Authentication details being passed to child app:</p>
-        <ul>
-          <li><strong>authToken:</strong> {authToken.substring(0, 20)}...</li>
-          <li><strong>tenantName:</strong> {tenantName}</li>
-        </ul>
-      </div>
-    );
-  }, [appName, authToken, tenantName, currentUser]);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
+  
+  if (!currentUser) {
     return (
       <div className="error-container">
-        <p className="error">{error}</p>
-        <Link to="/">Back to Login</Link>
+        <p className="error">You must be logged in to view embedded apps</p>
+        <a href="/">Back to Login</a>
       </div>
     );
   }
+
+  if (!authToken || !tenantName) {
+    return (
+      <div className="error-container">
+        <p className="error">Authentication token or tenant name is missing</p>
+        <a href="/">Back to Login</a>
+      </div>
+    );
+  }
+
+  // Render the appropriate child app based on the appName parameter
+  const renderChildApp = () => {
+    switch(appName) {
+      case 'template':
+        return <TemplateApp authToken={authToken} tenantName={tenantName} />;
+      default:
+        return (
+          <div className="error-container">
+            <p className="error">Unknown app: {appName}</p>
+            <a href="/">Back to Login</a>
+          </div>
+        );
+    }
+  };
 
   return (
     <div className="embedded-app-container">
       <div className="embedded-app-header">
-        <Link to="/">Back to Login</Link>
+        <a href="/">Back to Login</a>
         <h2>Embedded App: {appName}</h2>
       </div>
       <div className="embedded-app-content">
-        {childAppComponent}
+        {renderChildApp()}
       </div>
     </div>
   );
