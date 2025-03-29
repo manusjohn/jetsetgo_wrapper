@@ -8,6 +8,11 @@ window.addEventListener('message', (event) => {
     localStorage.setItem('embeddedAuthToken', event.data.authToken);
     localStorage.setItem('embeddedTenantName', event.data.tenantName);
     
+    // Fix base URL for assets in embedded mode
+    const base = document.createElement('base');
+    base.href = '/child-apps/template/';
+    document.head.prepend(base);
+    
     // Reload the page to apply the embedded authentication
     window.location.reload();
   }
@@ -23,4 +28,12 @@ if (embeddedAuthToken && embeddedTenantName) {
   // This will be picked up by the AuthContext in the child app
   window.embeddedAuthToken = embeddedAuthToken;
   window.embeddedTenantName = embeddedTenantName;
+  
+  // Ensure base URL is set for assets in embedded mode
+  if (!document.querySelector('base')) {
+    const base = document.createElement('base');
+    base.href = '/child-apps/template/';
+    document.head.prepend(base);
+    console.log('Added base URL for embedded mode asset resolution');
+  }
 }
