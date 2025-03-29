@@ -9,12 +9,27 @@ window.addEventListener('message', (event) => {
     localStorage.setItem('embeddedTenantName', event.data.tenantName);
     
     // Fix base URL for assets in embedded mode
-    const base = document.createElement('base');
-    base.href = '/child-apps/template/';
-    document.head.prepend(base);
+    if (!document.querySelector('base')) {
+      const base = document.createElement('base');
+      base.href = '/child-apps/template/';
+      document.head.prepend(base);
+      console.log('Added base URL for embedded mode asset resolution');
+    }
     
-    // Reload the page to apply the embedded authentication
-    window.location.reload();
+    // Notify parent that we're ready
+    try {
+      window.parent.postMessage({ type: 'IFRAME_READY' }, '*');
+    } catch (e) {
+      console.error('Error posting message to parent:', e);
+    }
+    
+    // Don't reload the page, as it causes an infinite loop
+    // Instead, initialize the app with the embedded auth data
+    if (window.initializeWithEmbeddedAuth) {
+      window.initializeWithEmbeddedAuth(event.data.authToken, event.data.tenantName);
+    } else {
+      console.log('No initialization function found, storing auth data for later use');
+    }
   }
 });
 
@@ -35,5 +50,12 @@ if (embeddedAuthToken && embeddedTenantName) {
     base.href = '/child-apps/template/';
     document.head.prepend(base);
     console.log('Added base URL for embedded mode asset resolution');
+  }
+  
+  // Notify parent that we're ready
+  try {
+    window.parent.postMessage({ type: 'IFRAME_READY' }, '*');
+  } catch (e) {
+    console.error('Error posting message to parent:', e);
   }
 }
